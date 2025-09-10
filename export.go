@@ -246,6 +246,37 @@ func (conn *Conn) Emit(path ObjectPath, name string, values ...interface{}) erro
 	return err
 }
 
+// EmitWithDestination emits a signal with a specified destination.
+func (conn *Conn) EmitWithDestination(path ObjectPath, name string, dest string, values ...interface{}) error {
+	i := strings.LastIndex(name, ".")
+	if i == -1 {
+		return errors.New("dbus: invalid method name")
+	}
+	iface := name[:i]
+	member := name[i+1:]
+
+	msg := new(Message)
+	msg.Type = TypeSignal
+	msg.Headers = make(map[HeaderField]Variant)
+	msg.Headers[FieldInterface] = MakeVariant(iface)
+	msg.Headers[FieldMember] = MakeVariant(member)
+	msg.Headers[FieldPath] = MakeVariant(path)
+	msg.Headers[FieldDestination] = MakeVariant(dest)
+	msg.Body = values
+	if len(values) > 0 {
+		msg.Headers[FieldSignature] = MakeVariant(SignatureOf(values...))
+	}
+
+	var closed bool
+	err := conn.sendMessageAndIfClosed(msg, func() {
+		closed = true
+	})
+	if closed {
+		return ErrClosed
+	}
+	return err
+}
+
 // Export registers the given value to be exported as an object on the
 // message bus.
 //
