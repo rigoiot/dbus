@@ -444,6 +444,7 @@ func (conn *Conn) handleSignal(sequence Sequence, msg *Message) {
 	// as per http://dbus.freedesktop.org/doc/dbus-specification.html ,
 	// sender is optional for signals.
 	sender, _ := msg.Headers[FieldSender].value.(string)
+	destination, _ := msg.Headers[FieldDestination].value.(string)
 	if iface == "org.freedesktop.DBus" && sender == "org.freedesktop.DBus" {
 		if member == "NameLost" {
 			// If we lost the name on the bus, remove it from our
@@ -464,11 +465,12 @@ func (conn *Conn) handleSignal(sequence Sequence, msg *Message) {
 		}
 	}
 	signal := &Signal{
-		Sender:   sender,
-		Path:     msg.Headers[FieldPath].value.(ObjectPath),
-		Name:     iface + "." + member,
-		Body:     msg.Body,
-		Sequence: sequence,
+		Sender:      sender,
+		Path:        msg.Headers[FieldPath].value.(ObjectPath),
+		Name:        iface + "." + member,
+		Body:        msg.Body,
+		Sequence:    sequence,
+		Destination: destination,
 	}
 	conn.signalHandler.DeliverSignal(iface, member, signal)
 }
@@ -733,11 +735,12 @@ func (e Error) Error() string {
 // Signal represents a D-Bus message of type Signal. The name member is given in
 // "interface.member" notation, e.g. org.freedesktop.D-Bus.NameLost.
 type Signal struct {
-	Sender   string
-	Path     ObjectPath
-	Name     string
-	Body     []interface{}
-	Sequence Sequence
+	Sender      string
+	Path        ObjectPath
+	Name        string
+	Destination string
+	Body        []interface{}
+	Sequence    Sequence
 }
 
 // transport is a D-Bus transport.
